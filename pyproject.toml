@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "cannabis_review_data"
+version = "0.1.0"
+description = "Scraping and combining cannabis strain info and reviews."
+authors = ["Sam Friedman <githubsamburger@n23.mm.st>"]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+pandas = "^1.3.5"
+requests = "^2.26.0"
+tqdm = "^4.62.3"
+
+[tool.poetry.dev-dependencies]
+black = "^21.12b0"
+isort = "^5.10.1"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
