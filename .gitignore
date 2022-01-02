@@ -1,2 +1,4 @@
 .python-version
 strains_metadata.json
+.venv
+reviews/
