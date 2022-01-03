@@ -2,3 +2,6 @@
 strains_metadata.json
 .venv
 reviews/
+*.csv
+*.ipynb
+__pycache__/
