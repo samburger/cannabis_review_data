@@ -5,6 +5,7 @@ import os
 import random
 import time
 from itertools import chain
+from pathlib import Path
 
 import pandas as pd
 import requests
@@ -20,12 +21,14 @@ REVIEWS_API_URL = (
     "https://www.leafly.com/web-strain-explorer/api/strains/{}/reviews?take=50&page={}"
 )
 NUM_STRAINS = 5867
+REVIEWS_DIR = Path("reviews")
 
 _proxy = FreeProxy()
 PROXIES = _proxy.get_proxy_list()
 
 
 def scrape_strain_metadata() -> pd.DataFrame:
+    """Scrape the metadata of all strains from the API."""
     if os.path.exists("strains_metadata.json"):
         log.info("Loading existing strain metadata")
         with open("strains_metadata.json", "r") as f:
@@ -63,10 +66,7 @@ def scrape_strain_metadata() -> pd.DataFrame:
 
 
 def scrape_reviews(strain_slug: str) -> pd.DataFrame:
-    """
-    This is the task given to each process.  Scrape the reviews for a given strain.
-    This way, we can divide a list of strains into n_cores parts for each process.
-    """
+    """Scrape the reviews for a given strain."""
     reviews = []
     proxies = {"http": random.choice(PROXIES)}
     first_page = requests.get(REVIEWS_API_URL.format(strain_slug, 1), proxies=proxies)
@@ -104,39 +104,34 @@ if __name__ == "__main__":
     # Make a dataframe of strain metadata
     strains = scrape_strain_metadata()
 
-    # Make a dataframe of review data
+    # Scrape missing review data for each strain
     all_strain_slugs = list(
         strains.sort_values(by=["review_count"], ascending=False)["slug"]
     )
-
     reviews_raw = []
     random.shuffle(all_strain_slugs)
     all_strain_slugs = [
         i for i in all_strain_slugs if not os.path.exists(f"./reviews/reviews_{i}.json")
     ]
     for strain in tqdm(all_strain_slugs):
-        if os.path.exists(f"./reviews/reviews_{strain}.json"):
+        if os.path.exists(f"./reviews/{strain}.json"):
             continue
         reviews_raw.append(scrape_reviews(strain))
-        with open(f"./reviews/reviews_{strain}.json", "w") as f:
+        with open(f"./reviews/{strain}.json", "w") as f:
             json.dump(reviews_raw[-1], f)
         if len(reviews_raw[-1]) <= 1:
             time.sleep(3)
-    # TODO: load from reviews dir and then flatten
-    # review_list = list(chain.from_iterable(chain.from_iterable(reviews_raw)))
-    # df = pd.DataFrame()
-    # for col in [
-    #     "id",
-    #     "username",
-    #     "created",
-    #     "form",
-    #     "language",
-    #     "rating",
-    #     "upvotesCount",
-    #     "text",
-    # ]:
-    #     df[col] = [r[col] for r in review_list]
-    # df["strain_id"] = [
-    #     strains.loc[strains["slug"] == r["strainSlug"], :].index[0] for r in review_list
-    # ]
-    # df = df.rename(columns={"id": "review_id", "upvotesCount": "upvotes"})
+
+    # Convert review data into a single DataFrame
+    dfs = []
+    for file in tqdm(list(REVIEWS_DIR.glob("*.json"))):
+        with open(file, "r") as f:
+            try:
+                reviews = json.load(f)[0]
+            except IndexError:  # no reviews for the strain
+                continue
+        df = pd.DataFrame(reviews)
+        dfs.append(df)
+    reviews_df = pd.concat(dfs, ignore_index=True)
+    reviews_df = reviews_df.sort_values(by=["strainSlug", "created"])
+    print(reviews_df.head())
