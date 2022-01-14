@@ -111,7 +111,7 @@ if __name__ == "__main__":
     reviews_raw = []
     random.shuffle(all_strain_slugs)
     all_strain_slugs = [
-        i for i in all_strain_slugs if not os.path.exists(f"./reviews/reviews_{i}.json")
+        i for i in all_strain_slugs if not os.path.exists(f"./reviews/{i}.json")
     ]
     for strain in tqdm(all_strain_slugs):
         if os.path.exists(f"./reviews/{strain}.json"):
