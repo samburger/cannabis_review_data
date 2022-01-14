@@ -12,6 +12,7 @@ tqdm = "^4.62.3"
 free-proxy = "^1.0.4"
 pqdm = "^0.1.0"
 matplotlib = "^3.5.1"
+tables = "^3.7.0"
 
 [tool.poetry.dev-dependencies]
 black = "^21.12b0"
