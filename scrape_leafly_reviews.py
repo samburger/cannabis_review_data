@@ -14,6 +14,7 @@ from tqdm import tqdm, trange
 
 log.basicConfig(level=log.INFO)
 
+# Not sure why these use separate pagination methods but ok
 STRAINS_API_URL = (
     "https://consumer-api.leafly.com/api/strain_playlists/v2?&skip={}&take={}"
 )
@@ -29,6 +30,7 @@ PROXIES = _proxy.get_proxy_list()
 
 def scrape_strain_metadata() -> pd.DataFrame:
     """Scrape the metadata of all strains from the API."""
+    # If we already have the metadata file, just load it.
     if os.path.exists("strains_metadata.json"):
         log.info("Loading existing strain metadata")
         with open("strains_metadata.json", "r") as f:
@@ -39,6 +41,7 @@ def scrape_strain_metadata() -> pd.DataFrame:
         proxies = {"http": random.choice(PROXIES)}
         for page in trange(1, math.ceil(NUM_STRAINS / 50) + 1):
             if len(strains_raw) % 50 == 0:
+                # Rotate proxy every 50 pages
                 proxies = {"http": random.choice(PROXIES)}
                 proxies["https"] = proxies["http"]
                 log.info(f"New proxy: {proxies['http']}")
@@ -46,6 +49,7 @@ def scrape_strain_metadata() -> pd.DataFrame:
             r = requests.get(STRAINS_API_URL.format(skip, 50), proxies=proxies)
             data = json.loads(r.content)
             strains_raw.append(data)
+        # Un-nest the data to arrive at a list of strain dicts
         batches = [batch["hits"]["strain"] for batch in strains_raw]
         strain_list = list(chain.from_iterable(batches))
         with open("strains_metadata.json", "w") as f:
@@ -120,6 +124,7 @@ if __name__ == "__main__":
         with open(f"./reviews/{strain}.json", "w") as f:
             json.dump(reviews_raw[-1], f)
         if len(reviews_raw[-1]) <= 1:
+            # In case the last scrape was fast (i.e. no reviews), wait to avoid 429
             time.sleep(3)
 
     # Convert review data into a single DataFrame
